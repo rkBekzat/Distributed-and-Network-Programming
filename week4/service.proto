@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+service calculate{
+	rpc reverse(Message) returns (Message);
+	
+	rpc split(splitRequest) returns (splitResponse);
+
+	rpc isprime(stream isPrimeRequest) returns (stream Message);
+}
+
+message Message{
+	string message = 1;
+}
+
+message splitResponse{
+	int32 number = 1;
+	repeated string parts = 2;
+}
+
+message splitRequest{
+	string text = 1;
+	string delim = 2;
+}
+
+message isPrimeRequest{
+	int32 number = 1;
+}
