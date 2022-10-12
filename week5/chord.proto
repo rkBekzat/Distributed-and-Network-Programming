@@ -10,6 +10,7 @@ service Node{
 	rpc Remove(RequestRemove) returns (ResponseAction);
 
 	rpc Find(RequestFind) returns (ResponseAction);
+
 }
 
 message Empty{}
@@ -79,7 +80,8 @@ message Address{
 }
 
 message ResponsePopulateFingerTable{
-	repeated Address result = 1;
+	int64 id = 1;
+	repeated Address result = 2;
 }
 
 message ResponseGetChord{
