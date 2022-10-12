@@ -1,3 +1,4 @@
+import grp
 from multiprocessing import process
 import grpc	
 import chord_pb2
@@ -113,7 +114,14 @@ class ServiceHandler(chord_pb2_grpc.RegisterServicer):
 def main():
 	global ipaddr, port, m
 	ipaddr, port, m = getFromArgsRegistry(argv)
-	print(ipaddr, port, m)
+	server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+	chord_pb2_grpc.add_RegisterServicer_to_server(ServiceHandler(), server)
+	server.add_insecure_port(f'{ipaddr}:{port}')
+	server.start()
+	try:
+		server.wait_for_termination()
+	except KeyboardInterrupt:
+		print("Shutting down")
 
 if __name__ == '__main__':
 	random.seed(0)

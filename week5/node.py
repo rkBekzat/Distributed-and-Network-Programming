@@ -157,6 +157,14 @@ class ServiceHandler(chord_pb2_grpc.Node):
 def main():
 	global registry_ipaddr, registry_port, ipaddr, port
 	registry_ipaddr, registry_port, ipaddr, port = getFromArgsNode(argv)
+	server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+	chord_pb2_grpc.add_NodeServicer_to_server(ServiceHandler(), server)
+	server.add_insecure_port(f'{ipaddr}:{port}')
+	server.start()
+	try:
+		server.wait_for_termination()
+	except KeyboardInterrupt:
+		print("Shutting down")
 
 if __name__ == '__main__':
 	main()
