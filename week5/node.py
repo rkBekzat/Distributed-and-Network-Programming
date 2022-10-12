@@ -1,7 +1,7 @@
 from platform import node
 import grpc  
-# import service_pb2
-# import service_pb2_grpc
+import chord_pb2
+import chord_pb2_grpc
 from concurrent import futures
 import time 
 from sys import argv, exit
@@ -119,6 +119,39 @@ def quit():
 		# TODO call save(key, node_data[key])
 		pass
 	exit(0)
+
+
+class ServiceHandler(chord_pb2_grpc.Node):
+	def GetFinger_table(self, request, context):
+		data = get_finger_table()
+		response = chord_pb2.ResponseFingerTable()
+		for sub_data in data:
+			address = chord_pb2.Address()
+			address.id = sub_data[0]
+			address.addr = sub_data[1]
+			response.result.append(address)
+		return response
+
+	def SaveData(self, request, context):
+		data = save(request.key, request.text)
+		response = chord_pb2.ResponseAction()
+		response.ok	= data[0]
+		response.message = data[1]
+		return response
+
+	def Remove(self, request, context):
+		data = remove(request.key)
+		response = chord_pb2.ResponseAction()
+		response.ok	= data[0]
+		response.message = data[1]
+		return response
+
+	def Find(self, request, context):
+		data = find(request.key)
+		response = chord_pb2.ResponseAction()
+		response.ok	= data[0]
+		response.message = data[1]
+		return response
 
 
 def main():

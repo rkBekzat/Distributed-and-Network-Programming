@@ -16,8 +16,7 @@ service Node{
 message Empty{}
 
 message ResponseFingerTable{
-	repeated string nodeId = 1;
-	repeated string address = 2;
+	repeated Address result = 1;
 }
 
 message RequestSave{
