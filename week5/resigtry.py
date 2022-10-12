@@ -1,7 +1,7 @@
 from multiprocessing import process
-import grpc  
-# import service_pb2
-# import service_pb2_grpc
+import grpc	
+import chord_pb2
+import chord_pb2_grpc
 from concurrent import futures
 import time 
 from sys import argv
@@ -72,6 +72,43 @@ def get_chord_info():
 		result.append((id, f"{chord_info[id][0]}:{chord_info[id][1]}"))
 	return result
 
+class ServiceHandler(chord_pb2_grpc.RegisterServicer):
+	def Register(self, request, context):
+		data = register(request.ipaddr, request.port)
+		response = chord_pb2.ResponseRegister()
+		response.done = data[0]
+		response.message = data[1]
+		return response
+
+	def Deregister(self, request, context):
+		data = deregister(request.id)
+		response = chord_pb2.ResponseDeregister()
+		response.done = data[0]
+		response.message = data[1]
+		return response
+
+	def PopulateFingerTable(self, request, context):
+		data = populate_finger_table(request.id)
+		response = chord_pb2.ResponsePopulateFingerTable()
+		response.id = data[0]
+		for sub_data in data[1]:
+			address = chord_pb2.Address()
+			address.id = sub_data[0]
+			address.addr = sub_data[1]
+			response.result.append(address)
+		return response
+
+	def GetChordInfo(self, request, context):
+		data = get_chord_info()
+		response = chord_pb2.ResponseGetChord()
+		for sub_data in data:
+			address = chord_pb2.Address()
+			address.id = sub_data[0]
+			address.addr = sub_data[1]
+			response.result.append(address)
+		return response
+
+
 	
 def main():
 	global ipaddr, port, m
@@ -81,3 +118,6 @@ def main():
 if __name__ == '__main__':
 	random.seed(0)
 	main()
+
+
+	
