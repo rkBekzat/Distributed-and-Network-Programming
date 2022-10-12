@@ -32,8 +32,12 @@ def processUpdate(new_process_id):
 			hash_value = zlib.adler32(key.encode())
 			target_id = hash_value % 2 ** m
 			if isGoodId(target_id, process_id, new_process_id):
-				# TODO call save(key, node_data[key])
-				pass
+				try:
+					with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+						stub = chord_pb2_grpc.NodeStub(channel)
+						stub.SaveData(chord_pb2.RequestSave(key=key, text=node_data[key]))
+				except ValueError:
+					pass
 
 def set_finger_table(given_finger_table):
 	finger_table.clear()
