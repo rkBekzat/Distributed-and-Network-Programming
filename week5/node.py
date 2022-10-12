@@ -63,15 +63,25 @@ def save(key, text):
 		node_data[key] = text
 		return (True, self_id)
 	elif isGoodId(target_id, self_id, finger_table.keys[0]):
-		# TODO call save of node with finger_table.keys[0]
-		pass
+		try:
+			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+				stub = chord_pb2_grpc.NodeStub(channel)
+				response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
+				return (response.ok, response.message)
+		except ValueError:
+			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
 	else:
 		for i in len(finger_table.keys()):
 			id1 = finger_table.keys[i]
 			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
-			if isGoodId(id, id1, id2):
-				# TODO call save of node with id1
-				pass
+			if isGoodId(key, id1, id2):
+				try:
+					with grpc.insecure_channel(f'{finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}') as channel:
+						stub = chord_pb2_grpc.NodeStub(channel)
+						response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
+						return (response.ok, response.message)
+				except ValueError:
+					return (False, f"can not connect to node {finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}")
 
 
 def remove(key):
@@ -83,15 +93,25 @@ def remove(key):
 		else:
 			return (False, "no data in this key to delete")
 	elif isGoodId(target_id, self_id, finger_table.keys[0]):
-		# TODO call remove of node with finger_table.keys[0]
-		pass
+		try:
+			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+				stub = chord_pb2_grpc.NodeStub(channel)
+				response = stub.Remove(chord_pb2.RequestRemove(key=key))
+				return (response.ok, response.message)
+		except ValueError:
+			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
 	else:
 		for i in len(finger_table.keys()):
 			id1 = finger_table.keys[i]
 			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
-			if isGoodId(id, id1, id2):
-				# TODO call remove of node with id1
-				pass
+			if isGoodId(key, id1, id2):
+				try:
+					with grpc.insecure_channel(f'{finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}') as channel:
+						stub = chord_pb2_grpc.NodeStub(channel)
+						response = stub.Remove(chord_pb2.RequestRemove(key=key))
+						return (response.ok, response.message)
+				except ValueError:
+					return (False, f"can not connect to node {finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}")
 
 def find(key):
 	hash_value = zlib.adler32(key.encode())
@@ -102,22 +122,41 @@ def find(key):
 		else:
 			return (False, "no data in this key")
 	elif isGoodId(target_id, self_id, finger_table.keys[0]):
-		# TODO call remove of node with finger_table.keys[0]
-		pass
+		try:
+			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+				stub = chord_pb2_grpc.NodeStub(channel)
+				response = stub.Find(chord_pb2.RequestRemove(key=key))
+				return (response.ok, response.message)
+		except ValueError:
+			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
 	else:
 		for i in len(finger_table.keys()):
 			id1 = finger_table.keys[i]
 			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
-			if isGoodId(id, id1, id2):
-				# TODO call remove of node with id1
-				pass
+			if isGoodId(key, id1, id2):
+				try:
+					with grpc.insecure_channel(f'{finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}') as channel:
+						stub = chord_pb2_grpc.NodeStub(channel)
+						response = stub.Find(chord_pb2.RequestRemove(key=key))
+						return (response.ok, response.message)
+				except ValueError:
+					return (False, f"can not connect to node {finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}")
 
 def quit():
-	# TODO call deregister(self_id)
+	try:
+		with grpc.insecure_channel(f'{registry_ipaddr}:{registry_port}') as channel:
+			stub = chord_pb2_grpc.RegisterStub(channel)
+			stub.Deregister(chord_pb2.RequestDeregister(id=self_id))
+	except ValueError:
+		pass
 	time.sleep(1)
 	for key in node_data:
-		# TODO call save(key, node_data[key])
-		pass
+		try:
+			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+				stub = chord_pb2_grpc.NodeStub(channel)
+				stub.SaveData(chord_pb2.RequestSave(key=key, text=node_data[key]))
+		except ValueError:
+			pass
 	exit(0)
 
 
