@@ -1,3 +1,4 @@
+from multiprocessing import process
 import grpc  
 # import service_pb2
 # import service_pb2_grpc
@@ -56,7 +57,13 @@ def populate_finger_table(id):
 	for _id in finger_ids.keys():
 		result_list = (_id, f"{chord_info[_id][0]}:{chord_info[_id][1]}")
 
-	return result_list
+	this_id_pos = -1
+	for _id in range(len(chord_info.keys())):
+		if chord_info.keys[_id] == id:
+			this_id_pos = _id
+			break
+	process_id = chord_info.keys[(this_id_pos - 1 + 2**m) % 2**m]
+	return process_id, result_list
 
 
 def get_chord_info():
