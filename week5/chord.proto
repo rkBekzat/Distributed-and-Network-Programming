@@ -1,0 +1,87 @@
+syntax="proto3";
+
+
+
+service Node{
+	rpc GetFinger_table(Empty) returns (ResponseFingerTable);
+
+	rpc SaveData(RequestSave) returns (ResponseAction);
+
+	rpc Remove(RequestRemove) returns (ResponseAction);
+
+	rpc Find(RequestFind) returns (ResponseAction);
+}
+
+message Empty{}
+
+message ResponseFingerTable{
+	repeated string nodeId = 1;
+	repeated string address = 2;
+}
+
+message RequestSave{
+	string key = 1;
+	string text = 2;
+}
+
+message ResponseAction{
+	bool ok = 1;
+	string message = 2;
+}
+
+message RequestRemove{
+	string key = 1;
+}
+
+message RequestFind{
+	string key = 1;
+}
+
+
+service Register{
+	rpc Register(RequestRegister) returns (ResponseRegister);
+
+	rpc Deregister(RequestDeregister) returns (ResponseDeregister);
+
+	rpc PopulateFingerTable(RequestPopulateFingerTable) returns (ResponsePopulateFingerTable);
+
+	rpc GetChordInfo(Empty) returns (ResponseGetChord);
+}
+
+
+message RequestRegister{
+	string ipaddr = 1;
+	int64 port = 2;
+}
+
+message ResponseRegister{
+	bool done = 1;
+	string message = 2;
+}
+
+message RequestDeregister{
+	int64 id = 1;
+}
+
+message ResponseDeregister{
+	bool done = 1;
+	string message = 2;
+}
+
+
+message RequestPopulateFingerTable{
+	int64 id = 1;
+}
+
+message Address{
+	int64 id = 1;
+	string addr = 2;
+}
+
+message ResponsePopulateFingerTable{
+	repeated Address result = 1;
+}
+
+message ResponseGetChord{
+	repeated Address result = 1;
+}
