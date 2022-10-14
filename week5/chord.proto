@@ -3,7 +3,7 @@ syntax="proto3";
 
 
 service Node{
-	rpc GetFinger_table(Empty) returns (ResponseFingerTable);
+	rpc GetFingerTable(Empty) returns (ResponseFingerTable);
 
 	rpc SaveData(RequestSave) returns (ResponseAction);
 
@@ -11,6 +11,11 @@ service Node{
 
 	rpc Find(RequestFind) returns (ResponseAction);
 
+	rpc Name(Empty) returns (Answer);
+}
+
+message Answer{
+	string name = 1;
 }
 
 message Empty{}
@@ -38,7 +43,7 @@ message RequestFind{
 }
 
 
-service Register{
+service Registry{
 	rpc Register(RequestRegister) returns (ResponseRegister);
 
 	rpc Deregister(RequestDeregister) returns (ResponseDeregister);
@@ -46,6 +51,8 @@ service Register{
 	rpc PopulateFingerTable(RequestPopulateFingerTable) returns (ResponsePopulateFingerTable);
 
 	rpc GetChordInfo(Empty) returns (ResponseGetChord);
+
+	rpc Name(Empty) returns (Answer);
 }
 
 

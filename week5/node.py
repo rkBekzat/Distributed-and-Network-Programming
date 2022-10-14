@@ -1,3 +1,6 @@
+from _thread import *
+import threading
+import time
 from platform import node
 import grpc  
 import chord_pb2
@@ -149,7 +152,7 @@ def find(key):
 def quit():
 	try:
 		with grpc.insecure_channel(f'{registry_ipaddr}:{registry_port}') as channel:
-			stub = chord_pb2_grpc.RegisterStub(channel)
+			stub = chord_pb2_grpc.RegistryStub(channel)
 			stub.Deregister(chord_pb2.RequestDeregister(id=self_id))
 	except ValueError:
 		pass
@@ -165,7 +168,7 @@ def quit():
 
 
 class ServiceHandler(chord_pb2_grpc.Node):
-	def GetFinger_table(self, request, context):
+	def GetFingerTable(self, request, context):
 		data = get_finger_table()
 		response = chord_pb2.ResponseFingerTable()
 		for sub_data in data:
@@ -196,10 +199,24 @@ class ServiceHandler(chord_pb2_grpc.Node):
 		response.message = data[1]
 		return response
 
+	def Name(self, request, context):
+		response = chord_pb2.Answer()
+		response.name = "Connected to Node"
+		return response
 
-def main():
-	global registry_ipaddr, registry_port, ipaddr, port
-	registry_ipaddr, registry_port, ipaddr, port = getFromArgsNode(argv)
+def forRegister(ipaddr, port):
+	try:
+		channel = grpc.insecure_channel(f'{ipaddr}:{port}')
+		msg = chord_pb2.Empty()
+		stub = chord_pb2_grpc.RegistryStub(channel)
+		response = stub.Name(msg)
+		identity = response.name
+		if 'Registry' not in identity:
+			raise Exception("You're not connected to regeistry")	
+	except grpc.RpcError:
+		raise Exception("You're not connected to regeistry")
+
+def Server(ipaddr, port):
 	server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
 	chord_pb2_grpc.add_NodeServicer_to_server(ServiceHandler(), server)
 	server.add_insecure_port(f'{ipaddr}:{port}')
@@ -208,6 +225,13 @@ def main():
 		server.wait_for_termination()
 	except KeyboardInterrupt:
 		print("Shutting down")
+
+def main():
+	global registry_ipaddr, registry_port, ipaddr, port
+	registry_ipaddr, registry_port, ipaddr, port = getFromArgsNode(argv)
+	thread1 = threading.Thread(target=forRegister(registry_ipaddr, registry_port), args=())
+	thread2 = threading.Thread(target=Server(ipaddr, port), args=())
+	
 
 if __name__ == '__main__':
 	main()

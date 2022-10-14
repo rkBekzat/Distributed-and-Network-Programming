@@ -1,5 +1,8 @@
 import grp
 from multiprocessing import process
+from token import NAME
+from tokenize import Name
+from unicodedata import name
 import grpc	
 import chord_pb2
 import chord_pb2_grpc
@@ -73,7 +76,7 @@ def get_chord_info():
 		result.append((id, f"{chord_info[id][0]}:{chord_info[id][1]}"))
 	return result
 
-class ServiceHandler(chord_pb2_grpc.RegisterServicer):
+class ServiceHandler(chord_pb2_grpc.RegistryServicer):
 	def Register(self, request, context):
 		data = register(request.ipaddr, request.port)
 		response = chord_pb2.ResponseRegister()
@@ -109,13 +112,17 @@ class ServiceHandler(chord_pb2_grpc.RegisterServicer):
 			response.result.append(address)
 		return response
 
+	def Name(self, request, context):
+		response = chord_pb2.Answer()
+		response.name = "Connected to Registry"
+		return response
 
 	
 def main():
 	global ipaddr, port, m
 	ipaddr, port, m = getFromArgsRegistry(argv)
 	server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
-	chord_pb2_grpc.add_RegisterServicer_to_server(ServiceHandler(), server)
+	chord_pb2_grpc.add_RegistryServicer_to_server(ServiceHandler(), server)
 	server.add_insecure_port(f'{ipaddr}:{port}')
 	server.start()
 	try:
