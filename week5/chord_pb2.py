@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x63hord.proto\"\x16\n\x06\x41nswer\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x07\n\x05\x45mpty\"/\n\x13ResponseFingerTable\x12\x18\n\x06result\x18\x01 \x03(\x0b\x32\x08.Address\"(\n\x0bRequestSave\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\"-\n\x0eResponseAction\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x1c\n\rRequestRemove\x12\x0b\n\x03key\x18\x01 \x01(\t\"\x1a\n\x0bRequestFind\x12\x0b\n\x03key\x18\x01 \x01(\t\"/\n\x0fRequestRegister\x12\x0e\n\x06ipaddr\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x03\"1\n\x10ResponseRegister\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x1f\n\x11RequestDeregister\x12\n\n\x02id\x18\x01 \x01(\x03\"3\n\x12ResponseDeregister\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"(\n\x1aRequestPopulateFingerTable\x12\n\n\x02id\x18\x01 \x01(\x03\"#\n\x07\x41\x64\x64ress\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\"C\n\x1bResponsePopulateFingerTable\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x18\n\x06result\x18\x02 \x03(\x0b\x32\x08.Address\",\n\x10ResponseGetChord\x12\x18\n\x06result\x18\x01 \x03(\x0b\x32\x08.Address2\xcc\x01\n\x04Node\x12.\n\x0eGetFingerTable\x12\x06.Empty\x1a\x14.ResponseFingerTable\x12)\n\x08SaveData\x12\x0c.RequestSave\x1a\x0f.ResponseAction\x12)\n\x06Remove\x12\x0e.RequestRemove\x1a\x0f.ResponseAction\x12%\n\x04\x46ind\x12\x0c.RequestFind\x1a\x0f.ResponseAction\x12\x17\n\x04Name\x12\x06.Empty\x1a\x07.Answer2\x88\x02\n\x08Registry\x12/\n\x08Register\x12\x10.RequestRegister\x1a\x11.ResponseRegister\x12\x35\n\nDeregister\x12\x12.RequestDeregister\x1a\x13.ResponseDeregister\x12P\n\x13PopulateFingerTable\x12\x1b.RequestPopulateFingerTable\x1a\x1c.ResponsePopulateFingerTable\x12)\n\x0cGetChordInfo\x12\x06.Empty\x1a\x11.ResponseGetChord\x12\x17\n\x04Name\x12\x06.Empty\x1a\x07.Answerb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x63hord.proto\"\x16\n\x06\x41nswer\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x07\n\x05\x45mpty\";\n\x13ResponseFingerTable\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x18\n\x06result\x18\x02 \x03(\x0b\x32\x08.Address\"(\n\x0bRequestSave\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\"-\n\x0eResponseAction\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x1c\n\rRequestRemove\x12\x0b\n\x03key\x18\x01 \x01(\t\"\x1a\n\x0bRequestFind\x12\x0b\n\x03key\x18\x01 \x01(\t\"/\n\x0fRequestRegister\x12\x0e\n\x06ipaddr\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x03\"1\n\x10ResponseRegister\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\x1f\n\x11RequestDeregister\x12\n\n\x02id\x18\x01 \x01(\x03\"3\n\x12ResponseDeregister\x12\x0c\n\x04\x64one\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"(\n\x1aRequestPopulateFingerTable\x12\n\n\x02id\x18\x01 \x01(\x03\"#\n\x07\x41\x64\x64ress\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\"C\n\x1bResponsePopulateFingerTable\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x18\n\x06result\x18\x02 \x03(\x0b\x32\x08.Address\",\n\x10ResponseGetChord\x12\x18\n\x06result\x18\x01 \x03(\x0b\x32\x08.Address2\xcc\x01\n\x04Node\x12.\n\x0eGetFingerTable\x12\x06.Empty\x1a\x14.ResponseFingerTable\x12)\n\x08SaveData\x12\x0c.RequestSave\x1a\x0f.ResponseAction\x12)\n\x06Remove\x12\x0e.RequestRemove\x1a\x0f.ResponseAction\x12%\n\x04\x46ind\x12\x0c.RequestFind\x1a\x0f.ResponseAction\x12\x17\n\x04Name\x12\x06.Empty\x1a\x07.Answer2\x88\x02\n\x08Registry\x12/\n\x08Register\x12\x10.RequestRegister\x1a\x11.ResponseRegister\x12\x35\n\nDeregister\x12\x12.RequestDeregister\x1a\x13.ResponseDeregister\x12P\n\x13PopulateFingerTable\x12\x1b.RequestPopulateFingerTable\x1a\x1c.ResponsePopulateFingerTable\x12)\n\x0cGetChordInfo\x12\x06.Empty\x1a\x11.ResponseGetChord\x12\x17\n\x04Name\x12\x06.Empty\x1a\x07.Answerb\x06proto3')
 
 
 
@@ -148,33 +148,33 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _EMPTY._serialized_start=39
   _EMPTY._serialized_end=46
   _RESPONSEFINGERTABLE._serialized_start=48
-  _RESPONSEFINGERTABLE._serialized_end=95
-  _REQUESTSAVE._serialized_start=97
-  _REQUESTSAVE._serialized_end=137
-  _RESPONSEACTION._serialized_start=139
-  _RESPONSEACTION._serialized_end=184
-  _REQUESTREMOVE._serialized_start=186
-  _REQUESTREMOVE._serialized_end=214
-  _REQUESTFIND._serialized_start=216
-  _REQUESTFIND._serialized_end=242
-  _REQUESTREGISTER._serialized_start=244
-  _REQUESTREGISTER._serialized_end=291
-  _RESPONSEREGISTER._serialized_start=293
-  _RESPONSEREGISTER._serialized_end=342
-  _REQUESTDEREGISTER._serialized_start=344
-  _REQUESTDEREGISTER._serialized_end=375
-  _RESPONSEDEREGISTER._serialized_start=377
-  _RESPONSEDEREGISTER._serialized_end=428
-  _REQUESTPOPULATEFINGERTABLE._serialized_start=430
-  _REQUESTPOPULATEFINGERTABLE._serialized_end=470
-  _ADDRESS._serialized_start=472
-  _ADDRESS._serialized_end=507
-  _RESPONSEPOPULATEFINGERTABLE._serialized_start=509
-  _RESPONSEPOPULATEFINGERTABLE._serialized_end=576
-  _RESPONSEGETCHORD._serialized_start=578
-  _RESPONSEGETCHORD._serialized_end=622
-  _NODE._serialized_start=625
-  _NODE._serialized_end=829
-  _REGISTRY._serialized_start=832
-  _REGISTRY._serialized_end=1096
+  _RESPONSEFINGERTABLE._serialized_end=107
+  _REQUESTSAVE._serialized_start=109
+  _REQUESTSAVE._serialized_end=149
+  _RESPONSEACTION._serialized_start=151
+  _RESPONSEACTION._serialized_end=196
+  _REQUESTREMOVE._serialized_start=198
+  _REQUESTREMOVE._serialized_end=226
+  _REQUESTFIND._serialized_start=228
+  _REQUESTFIND._serialized_end=254
+  _REQUESTREGISTER._serialized_start=256
+  _REQUESTREGISTER._serialized_end=303
+  _RESPONSEREGISTER._serialized_start=305
+  _RESPONSEREGISTER._serialized_end=354
+  _REQUESTDEREGISTER._serialized_start=356
+  _REQUESTDEREGISTER._serialized_end=387
+  _RESPONSEDEREGISTER._serialized_start=389
+  _RESPONSEDEREGISTER._serialized_end=440
+  _REQUESTPOPULATEFINGERTABLE._serialized_start=442
+  _REQUESTPOPULATEFINGERTABLE._serialized_end=482
+  _ADDRESS._serialized_start=484
+  _ADDRESS._serialized_end=519
+  _RESPONSEPOPULATEFINGERTABLE._serialized_start=521
+  _RESPONSEPOPULATEFINGERTABLE._serialized_end=588
+  _RESPONSEGETCHORD._serialized_start=590
+  _RESPONSEGETCHORD._serialized_end=634
+  _NODE._serialized_start=637
+  _NODE._serialized_end=841
+  _REGISTRY._serialized_start=844
+  _REGISTRY._serialized_end=1108
 # @@protoc_insertion_point(module_scope)

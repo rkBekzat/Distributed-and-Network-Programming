@@ -21,7 +21,8 @@ message Answer{
 message Empty{}
 
 message ResponseFingerTable{
-	repeated Address result = 1;
+	int64 id = 1;
+	repeated Address result = 2;
 }
 
 message RequestSave{

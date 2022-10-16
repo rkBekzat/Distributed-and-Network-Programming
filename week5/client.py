@@ -6,12 +6,11 @@ import chord_pb2_grpc
 connected_to = "not connected"
 def connect(str):
 	_, addr = str.split(' ')
-	global channel, stub
+	global channel, stub, response, connected_to
 	msg = chord_pb2.Empty()
-	response
 	try:
 		channel = grpc.insecure_channel(addr)
-		stub = chord_pb2_grpc.RegisterStub(channel)
+		stub = chord_pb2_grpc.RegistryStub(channel)
 		try:
 			response = stub.Name(msg)
 		except grpc.RpcError:
@@ -19,7 +18,7 @@ def connect(str):
 			try:
 				response = stub.Name(msg)
 			except grpc.RpcError:
-				raise Exception("not connected to both register and node")
+				print("not connected to both register and node")
 	except Exception as error:
 		print(error)	
 
@@ -33,7 +32,8 @@ def get_info():
 	if 'Registry' in connected_to:
 		msg = chord_pb2.Empty()
 		response = stub.GetChordInfo(msg)
-		# print(response)
+		for node in response:
+			print(node.id + "          " + node.addr)
 	else:
 		msg = chord_pb2.Empty()
 		response = stub.GetFingerTable(msg)
