@@ -83,23 +83,34 @@ def save(key, text):
 	elif isGoodId(target_id, self_id, list_ids[0]):
 		print("Second state")
 		try:
-			with grpc.insecure_channel(f'{list_ids[0][0]}:{list_ids[0][1]}') as channel:
+			print("Tried to connect")
+			print(list_ids[0])
+			print(finger_table[list_ids[0]])
+			print(finger_table.keys())
+			print(finger_table[list_ids[0]][0])
+			with grpc.insecure_channel(f'{finger_table[list_ids[0]][0]}:{finger_table[list_ids[0]][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
 				response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
 				return (response.ok, response.message)
 		except ValueError:
-			return (False, f"can not connect to node {list_ids[0][0]}:{list_ids[0][1]}")
+			return (False, f"can not connect to node {finger_table[list_ids[0]][0]}:{finger_table[list_ids[0]][1]}")
 	else:
 		print('Third State!')
 		print(list_ids)
-		for i in len(list_ids):
+		for i in range(len(list_ids)):
+			print('RUN LOOP!')
 			id1 = list_ids[i]
 			id2 = list_ids[(i + 1)%len(list_ids)]
 			print("IDs: ", id1, id2)
-			print("GOOD? ", isGoodId(key, id1, id2))
-			if isGoodId(key, id1, id2):
+			print("GOOD? ", isGoodId(target_id, id1, id2))
+			if isGoodId(target_id, id1, id2):
 				try:
-					with grpc.insecure_channel(f'{list_ids[id1][0]}:{list_ids[id1][1]}') as channel:
+					print("Tried to connect")
+					print(finger_table[id1])
+					print(finger_table.keys())
+					print(finger_table[id1][0])
+					print(f'{finger_table[id1][0]}:{finger_table[id1][1]}')
+					with grpc.insecure_channel(f'{finger_table[id1][0]}:{finger_table[id1][1]}') as channel:
 						print("connected!")
 						stub = chord_pb2_grpc.NodeStub(channel)
 						print("created stub")
@@ -107,7 +118,8 @@ def save(key, text):
 						print("saved data")
 						return (response.ok, response.message)
 				except ValueError:
-					return (False, f"can not connect to node {list_ids[id1][0]}:{list_ids[id1][1]}")
+					return (False, f"can not connect to node {finger_table[id1][0]}:{finger_table[id1][1]}")
+			print('RUN LOOP!')
 
 def remove(key):
 	hash_value = zlib.adler32(key.encode())
@@ -215,7 +227,7 @@ class ServiceHandler(chord_pb2_grpc.Node):
 		print(data)
 		response = chord_pb2.ResponseAction()
 		response.ok	= data[0]
-		response.message = data[1]
+		response.message = str(data[1])
 		return response
 
 	def Remove(self, request, context):
