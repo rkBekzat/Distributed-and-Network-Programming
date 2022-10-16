@@ -62,6 +62,15 @@ def isGoodId(id, process_id, self_id):
 	return (id > process_id and id <= self_id)
 
 
+def findNext(id, main_id):
+	list_id = sorted(finger_table.keys())
+	for _id in list_id:
+		if _id >= id % 2**m:
+			return _id
+	if len(list_id) > 0:
+		return sorted(list_id)[0]
+	return main_id
+
 def save(key, text):
 	hash_value = zlib.adler32(key.encode())
 	target_id = hash_value % 2 ** m
@@ -70,56 +79,38 @@ def save(key, text):
 	print('Selfid:', self_id)
 
 	list_ids = sorted(finger_table.keys())
-
-	print('Finget table: ', list_ids[0])
-	print(isGoodId(target_id, process_id, self_id))
-	
-	print(isGoodId(target_id, self_id, list_ids[0]))
+	next_id = findNext(self_id)
 
 	if isGoodId(target_id, process_id, self_id):
-		print('First state!')
 		node_data[key] = text
 		return (True, self_id)
-	elif isGoodId(target_id, self_id, list_ids[0]):
+	elif isGoodId(target_id, self_id, next_id):
 		print("Second state")
 		try:
 			print("Tried to connect")
-			print(list_ids[0])
-			print(finger_table[list_ids[0]])
+			print(next_id)
+			print(finger_table[next_id])
 			print(finger_table.keys())
-			print(finger_table[list_ids[0]][0])
-			with grpc.insecure_channel(f'{finger_table[list_ids[0]][0]}:{finger_table[list_ids[0]][1]}') as channel:
+			print(finger_table[next_id][0])
+			with grpc.insecure_channel(f'{finger_table[next_id][0]}:{finger_table[next_id][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
 				response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
 				return (response.ok, response.message)
 		except ValueError:
-			return (False, f"can not connect to node {finger_table[list_ids[0]][0]}:{finger_table[list_ids[0]][1]}")
+			return (False, f"can not connect to node {finger_table[next_id][0]}:{finger_table[next_id][1]}")
 	else:
-		print('Third State!')
 		print(list_ids)
 		for i in range(len(list_ids)):
-			print('RUN LOOP!')
 			id1 = list_ids[i]
 			id2 = list_ids[(i + 1)%len(list_ids)]
-			print("IDs: ", id1, id2)
-			print("GOOD? ", isGoodId(target_id, id1, id2))
 			if isGoodId(target_id, id1, id2):
 				try:
-					print("Tried to connect")
-					print(finger_table[id1])
-					print(finger_table.keys())
-					print(finger_table[id1][0])
-					print(f'{finger_table[id1][0]}:{finger_table[id1][1]}')
 					with grpc.insecure_channel(f'{finger_table[id1][0]}:{finger_table[id1][1]}') as channel:
-						print("connected!")
 						stub = chord_pb2_grpc.NodeStub(channel)
-						print("created stub")
 						response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
-						print("saved data")
 						return (response.ok, response.message)
 				except ValueError:
 					return (False, f"can not connect to node {finger_table[id1][0]}:{finger_table[id1][1]}")
-			print('RUN LOOP!')
 
 def remove(key):
 	hash_value = zlib.adler32(key.encode())
