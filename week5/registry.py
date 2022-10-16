@@ -17,7 +17,6 @@ chord_info = {}
 def getNonColision():
 	res = int(random.uniform(0, 2**m))
 	while res in chord_info.keys():
-		print(res)
 		res = int(random.uniform(0, 2**m))
 	return res
 
@@ -126,7 +125,7 @@ def main():
 	try:
 		server.wait_for_termination()
 	except KeyboardInterrupt:
-		print("Shutting down")
+		print("\nShutting down")
 
 if __name__ == '__main__':
 	random.seed(0)

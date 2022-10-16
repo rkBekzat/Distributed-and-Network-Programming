@@ -43,14 +43,8 @@ def get_info():
 			print(node.id, ":          " , node.addr)
 
 def save(str):
-	res = str.split(' ')[1:]
-	key = res[0][1:-1]
-	text = ''
-	for i in range(1, len(res)):
-		text += res[i] + ' '
-	text = text[:-1]
-	print("KEY:", key)
-	print('TEXT:', text)
+	_, key_ = str.split(' ', 1)
+	key, text = key_[1:].split('" ', 1)
 	if 'Registry' in connected_to:
 		print("In registry can't do this command")
 	else:
@@ -58,24 +52,25 @@ def save(str):
 		msg.key=key
 		msg.text=text
 		response = stub.SaveData(msg)
-		print(response)
+		print(response.ok, ",", response.message)
 
 def remove(key):
+	_, key = key.split(' ', 1)
 	if 'Registry' in connected_to:
 		print("In registry can't do this command")
 	else:
 		msg = chord_pb2.RequestRemove(key=key)
 		response = stub.Remove(msg)
-		print(response)
+		print(response.ok, ",", response.message)
 
 def find(key):
-	
+	_, key = key.split(' ', 1)
 	if 'Registry' in connected_to:
 		print("In registry can't do this command")
 	else:
 		msg = chord_pb2.RequestFind(key=key)
 		response = stub.Find(msg)
-		print(response)
+		print(response.ok, ",", response.message)
 
 def quit():
 	exit() 
