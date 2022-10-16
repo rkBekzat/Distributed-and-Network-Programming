@@ -58,7 +58,8 @@ def populate_finger_table(id):
 	for i in range(m):
 		finger_ids[findNext((id + 2 ** i) % (2**m), id)] = 1
 
-	del finger_ids[id]
+	if id in finger_ids:
+		del finger_ids[id]
 
 	result_list = []
 	for _id in finger_ids.keys():
