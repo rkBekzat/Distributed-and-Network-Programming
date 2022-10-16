@@ -30,6 +30,7 @@ self_id = 0
 node_data = {}
 
 def processUpdate(new_process_id):
+	global process_id
 	if(new_process_id > process_id):
 		for key in node_data:
 			hash_value = zlib.adler32(key.encode())
@@ -41,12 +42,13 @@ def processUpdate(new_process_id):
 						stub.SaveData(chord_pb2.RequestSave(key=key, text=node_data[key]))
 				except ValueError:
 					pass
+	process_id = new_process_id
 
 def set_finger_table(given_finger_table):
 	finger_table.clear()
 	for data in given_finger_table:
 		finger_table[data[0]] = (data[1].split(':')[0], int(data[1].split(':')[1]))
-	print(finger_table)
+	# print(finger_table)
 
 def get_finger_table():
 	result = []
@@ -56,40 +58,56 @@ def get_finger_table():
 
 def isGoodId(id, process_id, self_id):
 	if process_id > self_id:
-		return id in [x for x in range(2**m) if x > process_id or x <= self_id]
-	return id in [x for x in range(2**m) if x > process_id and x <= self_id]
+		return (id > process_id or id <= self_id)
+	return (id > process_id and id <= self_id)
 
-def isGoodId(id):
-	if process_id > self_id:
-		return id in [x for x in range(2**m) if x > process_id or x <= self_id]
-	return id in [x for x in range(2**m) if x > process_id and x <= self_id]
 
 def save(key, text):
 	hash_value = zlib.adler32(key.encode())
 	target_id = hash_value % 2 ** m
+	print('Target:', target_id)
+	print('PRoc id ', process_id)
+	print('Selfid:', self_id)
+
+	list_ids = sorted(finger_table.keys())
+
+	print('Finget table: ', list_ids[0])
+	print(isGoodId(target_id, process_id, self_id))
+	
+	print(isGoodId(target_id, self_id, list_ids[0]))
+
 	if isGoodId(target_id, process_id, self_id):
+		print('First state!')
 		node_data[key] = text
 		return (True, self_id)
-	elif isGoodId(target_id, self_id, finger_table.keys[0]):
+	elif isGoodId(target_id, self_id, list_ids[0]):
+		print("Second state")
 		try:
-			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
+			with grpc.insecure_channel(f'{list_ids[0][0]}:{list_ids[0][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
 				response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
 				return (response.ok, response.message)
 		except ValueError:
-			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
+			return (False, f"can not connect to node {list_ids[0][0]}:{list_ids[0][1]}")
 	else:
-		for i in len(finger_table.keys()):
-			id1 = finger_table.keys[i]
-			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
+		print('Third State!')
+		print(list_ids)
+		for i in len(list_ids):
+			id1 = list_ids[i]
+			id2 = list_ids[(i + 1)%len(list_ids)]
+			print("IDs: ", id1, id2)
+			print("GOOD? ", isGoodId(key, id1, id2))
 			if isGoodId(key, id1, id2):
 				try:
-					with grpc.insecure_channel(f'{finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}') as channel:
+					with grpc.insecure_channel(f'{list_ids[id1][0]}:{list_ids[id1][1]}') as channel:
+						print("connected!")
 						stub = chord_pb2_grpc.NodeStub(channel)
+						print("created stub")
 						response = stub.SaveData(chord_pb2.RequestSave(key=key, text=text))
+						print("saved data")
 						return (response.ok, response.message)
 				except ValueError:
-					return (False, f"can not connect to node {finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}")
+					return (False, f"can not connect to node {list_ids[id1][0]}:{list_ids[id1][1]}")
 
 def remove(key):
 	hash_value = zlib.adler32(key.encode())
@@ -186,10 +204,15 @@ class ServiceHandler(chord_pb2_grpc.Node):
 			address.id = sub_data[0]
 			address.addr = sub_data[1]
 			response.result.append(address)
+		response.id = self_id
 		return response
 
 	def SaveData(self, request, context):
+		print('ok')
+		print(request.key)
+		print(request.text)
 		data = save(request.key, request.text)
+		print(data)
 		response = chord_pb2.ResponseAction()
 		response.ok	= data[0]
 		response.message = data[1]
@@ -244,7 +267,9 @@ def main():
 			print(response.message)
 			exit(1)
 
-		# threading.Thread(target=Server, args=()).start()
+		thread = threading.Thread(target=Server, args=())
+		thread.start()
+		
 		while True:
 			try:
 				time.sleep(1)

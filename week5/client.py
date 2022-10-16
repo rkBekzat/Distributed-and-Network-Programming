@@ -32,28 +32,33 @@ def get_info():
 	if 'Registry' in connected_to:
 		msg = chord_pb2.Empty()
 		response = stub.GetChordInfo(msg)
-		for node in response:
-			print(node.id + "          " + node.addr)
+		for node in response.result:
+			print(node.id, ":          " , node.addr)
 	else:
 		msg = chord_pb2.Empty()
 		response = stub.GetFingerTable(msg)
-		# print(response)
+		print("Node id: ", response.id)
+		print("Finger table:")
+		for node in response.result:
+			print(node.id, ":          " , node.addr)
 
 def save(str):
-	key = ''
-	pos = 1
-	while str[pos] != str[0]:
-		key += str[pos]
-		pos += 1
-	pos += 2
-
-	text = str[pos:]
+	res = str.split(' ')[1:]
+	key = res[0][1:-1]
+	text = ''
+	for i in range(1, len(res)):
+		text += res[i] + ' '
+	text = text[:-1]
+	print("KEY:", key)
+	print('TEXT:', text)
 	if 'Registry' in connected_to:
 		print("In registry can't do this command")
 	else:
-		msg = chord_pb2.RequestSave(key=key, text=text)
+		msg = chord_pb2.RequestSave()
+		msg.key=key
+		msg.text=text
 		response = stub.SaveData(msg)
-		# print(response)
+		print(response)
 
 def remove(key):
 	if 'Registry' in connected_to:
@@ -61,7 +66,7 @@ def remove(key):
 	else:
 		msg = chord_pb2.RequestRemove(key=key)
 		response = stub.Remove(msg)
-		# print(response)
+		print(response)
 
 def find(key):
 	
@@ -70,10 +75,10 @@ def find(key):
 	else:
 		msg = chord_pb2.RequestFind(key=key)
 		response = stub.Find(msg)
-		# print(response)
+		print(response)
 
 def quit():
-	pass 
+	exit() 
 
 def main():
 	try:
@@ -86,7 +91,7 @@ def main():
 			elif str == "get_info":
 				get_info()
 			elif "save" in str:
-				save(str[5:])
+				save(str)
 			elif "find" in str:
 				find(str)
 			elif "remove" in str:

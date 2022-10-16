@@ -1,13 +1,7 @@
-import grp
-from multiprocessing import process
-from token import NAME
-from tokenize import Name
-from unicodedata import name
 import grpc	
 import chord_pb2
 import chord_pb2_grpc
 from concurrent import futures
-import time 
 from sys import argv
 import random
 
@@ -56,7 +50,7 @@ def deregister(id):
 def populate_finger_table(id):
 	finger_ids = {}
 	for i in range(m):
-		finger_ids[findNext((id + 2 ** i) % (2**m), id)] = 1
+		finger_ids[findNext((id + 2 ** i) % (2**m), id)] = i
 
 	if id in finger_ids:
 		del finger_ids[id]
