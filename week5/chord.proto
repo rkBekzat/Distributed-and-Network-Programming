@@ -63,7 +63,7 @@ message RequestRegister{
 }
 
 message ResponseRegister{
-	bool done = 1;
+	int64 done = 1;
 	string message = 2;
 }
 

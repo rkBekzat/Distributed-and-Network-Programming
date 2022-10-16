@@ -28,11 +28,12 @@ def getNonColision():
 	return res
 
 def findNext(id, main_id):
-	for _id in chord_info.keys():
-		if _id >= id:
+	list_id = sorted(list(chord_info.keys()))
+	for _id in list_id:
+		if _id >= id % 2**m:
 			return _id
-	if len(chord_info.keys()) > 0:
-		return chord_info.keys()[0]
+	if len(list_id) > 0:
+		return sorted(list_id)[0]
 	return main_id
 
 
@@ -54,19 +55,21 @@ def deregister(id):
 
 def populate_finger_table(id):
 	finger_ids = {}
-	for i in random(m):
+	for i in range(m):
 		finger_ids[findNext((id + 2 ** i) % (2**m), id)] = 1
-	
+
+	del finger_ids[id]
+
 	result_list = []
 	for _id in finger_ids.keys():
-		result_list = (_id, f"{chord_info[_id][0]}:{chord_info[_id][1]}")
-
+		result_list.append((_id, f"{chord_info[_id][0]}:{chord_info[_id][1]}"))
 	this_id_pos = -1
-	for _id in range(len(chord_info.keys())):
-		if chord_info.keys[_id] == id:
+	list_id = sorted(list(chord_info.keys()))
+	for _id in range(len(list_id)):
+		if list_id[_id] == id:
 			this_id_pos = _id
 			break
-	process_id = chord_info.keys[(this_id_pos - 1 + 2**m) % 2**m]
+	process_id = list_id[(this_id_pos - 1 + len(list_id)) % len(list_id)]
 	return process_id, result_list
 
 
@@ -81,7 +84,7 @@ class ServiceHandler(chord_pb2_grpc.RegistryServicer):
 		data = register(request.ipaddr, request.port)
 		response = chord_pb2.ResponseRegister()
 		response.done = data[0]
-		response.message = data[1]
+		response.message = str(data[1])
 		return response
 
 	def Deregister(self, request, context):
@@ -101,7 +104,7 @@ class ServiceHandler(chord_pb2_grpc.RegistryServicer):
 			address.addr = sub_data[1]
 			response.result.append(address)
 		return response
-
+	
 	def GetChordInfo(self, request, context):
 		data = get_chord_info()
 		response = chord_pb2.ResponseGetChord()

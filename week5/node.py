@@ -46,6 +46,7 @@ def set_finger_table(given_finger_table):
 	finger_table.clear()
 	for data in given_finger_table:
 		finger_table[data[0]] = (data[1].split(':')[0], int(data[1].split(':')[1]))
+	print(finger_table)
 
 def get_finger_table():
 	result = []
@@ -90,16 +91,17 @@ def save(key, text):
 				except ValueError:
 					return (False, f"can not connect to node {finger_table.keys[id1][0]}:{finger_table.keys[id1][1]}")
 
-
 def remove(key):
 	hash_value = zlib.adler32(key.encode())
 	target_id = hash_value % 2 ** m
 	if isGoodId(target_id, process_id, self_id):
+		print("TEST THIS BECKA")
 		if key in node_data:
 			return (True, self_id)
 		else:
 			return (False, "no data in this key to delete")
 	elif isGoodId(target_id, self_id, finger_table.keys[0]):
+		print("TEST THIS BECKA")
 		try:
 			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
@@ -108,6 +110,7 @@ def remove(key):
 		except ValueError:
 			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
 	else:
+		print("TEST THIS BECKA")
 		for i in len(finger_table.keys()):
 			id1 = finger_table.keys[i]
 			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
@@ -124,11 +127,13 @@ def find(key):
 	hash_value = zlib.adler32(key.encode())
 	target_id = hash_value % 2 ** m
 	if isGoodId(target_id, process_id, self_id):
+		print("TEST THIS BECKA")
 		if key in node_data:
 			return (True, self_id, f"{ipaddr}:{port}")
 		else:
 			return (False, "no data in this key")
 	elif isGoodId(target_id, self_id, finger_table.keys[0]):
+		print("TEST THIS BECKA")
 		try:
 			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
@@ -137,6 +142,7 @@ def find(key):
 		except ValueError:
 			return (False, f"can not connect to node {finger_table.keys[0][0]}:{finger_table.keys[0][1]}")
 	else:
+		print("TEST THIS BECKA")
 		for i in len(finger_table.keys()):
 			id1 = finger_table.keys[i]
 			id2 = finger_table.keys[(i + 1)%len(finger_table.keys())]
@@ -153,11 +159,15 @@ def quit():
 	try:
 		with grpc.insecure_channel(f'{registry_ipaddr}:{registry_port}') as channel:
 			stub = chord_pb2_grpc.RegistryStub(channel)
-			stub.Deregister(chord_pb2.RequestDeregister(id=self_id))
+			res = stub.Deregister(chord_pb2.RequestDeregister(id=self_id))
+			print(res.message)
+			if not res.done:
+				return
 	except ValueError:
 		pass
 	time.sleep(1)
 	for key in node_data:
+		print("TEST THIS BECKA")
 		try:
 			with grpc.insecure_channel(f'{finger_table.keys[0][0]}:{finger_table.keys[0][1]}') as channel:
 				stub = chord_pb2_grpc.NodeStub(channel)
@@ -204,19 +214,8 @@ class ServiceHandler(chord_pb2_grpc.Node):
 		response.name = "Connected to Node"
 		return response
 
-def forRegister(ipaddr, port):
-	try:
-		channel = grpc.insecure_channel(f'{ipaddr}:{port}')
-		msg = chord_pb2.Empty()
-		stub = chord_pb2_grpc.RegistryStub(channel)
-		response = stub.Name(msg)
-		identity = response.name
-		if 'Registry' not in identity:
-			raise Exception("You're not connected to regeistry")	
-	except grpc.RpcError:
-		raise Exception("You're not connected to regeistry")
 
-def Server(ipaddr, port):
+def Server():
 	server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
 	chord_pb2_grpc.add_NodeServicer_to_server(ServiceHandler(), server)
 	server.add_insecure_port(f'{ipaddr}:{port}')
@@ -225,12 +224,48 @@ def Server(ipaddr, port):
 		server.wait_for_termination()
 	except KeyboardInterrupt:
 		print("Shutting down")
+		quit()
 
 def main():
 	global registry_ipaddr, registry_port, ipaddr, port
 	registry_ipaddr, registry_port, ipaddr, port = getFromArgsNode(argv)
-	thread1 = threading.Thread(target=forRegister(registry_ipaddr, registry_port), args=())
-	thread2 = threading.Thread(target=Server(ipaddr, port), args=())
+
+	try:
+		channel = grpc.insecure_channel(f'{registry_ipaddr}:{registry_port}')
+		msg = chord_pb2.RequestRegister(ipaddr=ipaddr, port=port)
+		stub = chord_pb2_grpc.RegistryStub(channel)
+		response = stub.Register(msg)
+		if response.done != -1:
+			global m, self_id
+			self_id = response.done
+			m = int(response.message)
+			print(self_id, m)
+		else:
+			print(response.message)
+			exit(1)
+
+		# threading.Thread(target=Server, args=()).start()
+		while True:
+			try:
+				time.sleep(1)
+				channel = grpc.insecure_channel(f'{registry_ipaddr}:{registry_port}')
+				msg = chord_pb2.RequestPopulateFingerTable(id=self_id)
+				stub = chord_pb2_grpc.RegistryStub(channel)
+				response = stub.PopulateFingerTable(msg)
+				data = []
+				for _address in response.result:
+					data.append((_address.id, _address.addr))
+				processUpdate(response.id)
+				set_finger_table(data)
+			except grpc.RpcError:
+				print("You're not connected to regeistry")
+				exit(1)
+			except KeyboardInterrupt:
+				print("Shutting down")
+				quit()
+	except grpc.RpcError:
+		print("You're not connected to regeistry")
+		exit(1)
 	
 
 if __name__ == '__main__':
