@@ -4,6 +4,10 @@ service server{
     rpc RequestVote(Request) returns (Response);
 
     rpc AppendEntries(Request) returns (Response);
+
+    rpc GetLeader(Empty) returns (ResponseLeader);
+
+    rpc Suspend(RequestPeriod) returns (Empty);
 }
 
 message Request{
@@ -25,10 +29,4 @@ message ResponseLeader{
 
 message RequestPeriod{
     int64 period = 1;
-}
-
-service client{
-    rpc GetLeader(Empty) returns (ResponseLeader);
-
-    rpc Suspend(RequestPeriod) returns (Empty);
 }

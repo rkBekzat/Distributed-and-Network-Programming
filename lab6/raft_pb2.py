@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\",\n\x07Request\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x13\n\x0b\x63\x61ndidateID\x18\x02 \x01(\x03\"&\n\x08Response\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x0c\n\x04vote\x18\x02 \x01(\x08\"\x07\n\x05\x45mpty\"-\n\x0eResponseLeader\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"\x1f\n\rRequestPeriod\x12\x0e\n\x06period\x18\x01 \x01(\x03\x32R\n\x06server\x12\"\n\x0bRequestVote\x12\x08.Request\x1a\t.Response\x12$\n\rAppendEntries\x12\x08.Request\x1a\t.Response2Q\n\x06\x63lient\x12$\n\tGetLeader\x12\x06.Empty\x1a\x0f.ResponseLeader\x12!\n\x07Suspend\x12\x0e.RequestPeriod\x1a\x06.Emptyb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nraft.proto\",\n\x07Request\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x13\n\x0b\x63\x61ndidateID\x18\x02 \x01(\x03\"&\n\x08Response\x12\x0c\n\x04term\x18\x01 \x01(\x03\x12\x0c\n\x04vote\x18\x02 \x01(\x08\"\x07\n\x05\x45mpty\"-\n\x0eResponseLeader\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0f\n\x07\x61\x64\x64ress\x18\x02 \x01(\t\"\x1f\n\rRequestPeriod\x12\x0e\n\x06period\x18\x01 \x01(\x03\x32\x9b\x01\n\x06server\x12\"\n\x0bRequestVote\x12\x08.Request\x1a\t.Response\x12$\n\rAppendEntries\x12\x08.Request\x1a\t.Response\x12$\n\tGetLeader\x12\x06.Empty\x1a\x0f.ResponseLeader\x12!\n\x07Suspend\x12\x0e.RequestPeriod\x1a\x06.Emptyb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'raft_pb2', globals())
@@ -30,8 +30,6 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _RESPONSELEADER._serialized_end=154
   _REQUESTPERIOD._serialized_start=156
   _REQUESTPERIOD._serialized_end=187
-  _SERVER._serialized_start=189
-  _SERVER._serialized_end=271
-  _CLIENT._serialized_start=273
-  _CLIENT._serialized_end=354
+  _SERVER._serialized_start=190
+  _SERVER._serialized_end=345
 # @@protoc_insertion_point(module_scope)
