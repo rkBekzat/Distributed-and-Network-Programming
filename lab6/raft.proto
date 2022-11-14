@@ -3,7 +3,7 @@ syntax="proto3";
 service server{
     rpc RequestVote(Request) returns (Response);
 
-    rpc AppendEntries(request) returns (Response);
+    rpc AppendEntries(Request) returns (Response);
 }
 
 message Request{
@@ -13,7 +13,7 @@ message Request{
 
 message Response{
     int64 term = 1;
-    boolean vote = 2;
+    bool vote = 2;
 }
 
 message Empty{}
