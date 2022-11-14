@@ -1,0 +1,34 @@
+syntax="proto3";
+
+service server{
+    rpc RequestVote(Request) returns (Response);
+
+    rpc AppendEntries(request) returns (Response);
+}
+
+message Request{
+    int64 term = 1;
+    int64 candidateID = 2;
+}
+
+message Response{
+    int64 term = 1;
+    boolean vote = 2;
+}
+
+message Empty{}
+
+message ResponseLeader{
+    int64 id = 1;
+    string address = 2;
+}
+
+message RequestPeriod{
+    int64 period = 1;
+}
+
+service client{
+    rpc GetLeader(Empty) returns (ResponseLeader);
+
+    rpc Suspend(RequestPeriod) returns (Empty);
+}
