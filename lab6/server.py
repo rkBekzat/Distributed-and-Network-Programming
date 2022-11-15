@@ -48,7 +48,6 @@ def getArgs():
 
 def _RequestVote(trem, candidateID):
     global self_term_no, self_voted, self_leader, restart
-    self_leader = False
     restart = True
     if self_term_no == trem:
         if self_voted:
@@ -63,7 +62,6 @@ def _RequestVote(trem, candidateID):
 
 def _AppendEntries(trem, candidateID):
     global self_term_no, self_voted, leader, self_leader, restart
-    self_leader = False
     restart = True
     if self_term_no <= trem:
         self_term_no = trem
@@ -75,32 +73,41 @@ def _AppendEntries(trem, candidateID):
 
 def _Suspend(time):
     global suspend, restart
-    suspend = time 
+    suspend = time * 1000
     restart = True
 
 def funThrAppendForMe():
+    print("funThrAppendForMe")
     global self_id, self_term_no
     for key in all_nodes.keys():
         if key != self_id:
-            channel = grpc.insecure_channel(all_nodes[key])
-            stub = raft_pb2_grpc.serverStub(channel)
-            request = raft_pb2.Request(term = self_term_no, candidateID = self_id)
-            stub.AppendEntries(request)
+            try:
+                channel = grpc.insecure_channel(all_nodes[key])
+                stub = raft_pb2_grpc.serverStub(channel)
+                request = raft_pb2.Request(term = self_term_no, candidateID = self_id)
+                stub.AppendEntries(request)
+            except grpc.RpcError:
+                pass
 
 def funThrVoteForMe():
+    print("funThrVoteForMe")
     global self_id, self_term_no, self_voted_me
     self_voted_me = 1
     for key in all_nodes.keys():
         if key != self_id:
-            channel = grpc.insecure_channel(all_nodes[key])
-            stub = raft_pb2_grpc.serverStub(channel)
-            request = raft_pb2.Request(term = self_term_no, candidateID = self_id)
-            responce = stub.RequestVote(request)
-            if responce.vote:
-                self_voted_me += 1
+            try:
+                channel = grpc.insecure_channel(all_nodes[key])
+                stub = raft_pb2_grpc.serverStub(channel)
+                request = raft_pb2.Request(term = self_term_no, candidateID = self_id)
+                responce = stub.RequestVote(request)
+                if responce.vote:
+                    self_voted_me += 1
+            except grpc.RpcError:
+                pass
+                
 
-def waiting():
-    global restart, suspend, wait_time
+def waiting(wait_time):
+    global restart, suspend
     restart = True
     while restart:
         restart = False
@@ -108,38 +115,45 @@ def waiting():
             for _ in range(suspend):
                 time.sleep(0.001)
             suspend = 0
-        for _ in range(time):
+        for _ in range(wait_time):
             time.sleep(0.001)
             if restart:
                 break
 
-    return restart
-
 def funFollower():
-    global self_term_no, self_voted_me, self_leader, self_voted, restart, suspend
+    global self_term_no, self_voted_me, self_leader, self_voted, restart, suspend, wait_time
     is_Candidate = False
     is_Candidate_term = 0
     while True:
-        waiting()
+        if is_Candidate:
+            print("I am a candidate. Term:", self_term_no)
+        else:
+            print("I am a follower. Term:", self_term_no)
+        waiting(wait_time)
 
+        print("The leader is dead")
         if is_Candidate and (is_Candidate_term != self_term_no or self_voted_me < len(all_nodes.keys())/2):
+            print("Votes received")
             is_Candidate = False
         if is_Candidate:
+            print("Votes received")
             self_leader = True
             is_Candidate = False
             funLeader()
         is_Candidate = True
         self_term_no += 1
+        is_Candidate_term = self_term_no
         self_voted = True
 
         Thread(target=funThrVoteForMe).start()
 
 
 def funLeader():
+    print("I am a leader. Term:", self_term_no)
     global self_leader, leader, self_id, restart
     leader = self_id
     while self_leader:
-        waiting()
+        waiting(50)
 
         Thread(target=funThrAppendForMe).start()
         pass
@@ -147,32 +161,42 @@ def funLeader():
 
 
 class serverServicer(raft_pb2_grpc.serverServicer):
-    def RequestVote(self, request, context):
-        global self_term_no
+    def RequestVote(self, request, _):
+        global self_term_no, self_leader
         responce = raft_pb2.Response()
         responce.term = self_term_no
         responce.vote = _RequestVote(int(request.term), int(request.candidateID))
+        if responce.vote:
+            print("Vote for node", request.candidateID)
+            self_leader = False
         return responce
 
-    def AppendEntries(self, request, context):
-        global self_term_no
+    def AppendEntries(self, request, _):
+        global self_term_no, self_leader
         responce = raft_pb2.Response()
         responce.term = self_term_no
         responce.vote = _AppendEntries(int(request.term), int(request.candidateID))
+        if responce.vote:
+            self_leader = False
         return responce
 
-    def GetLeader(self, request, context):
+    def GetLeader(self, request, _):
+        print("Command from client: getleader")
         global leader
         responce = raft_pb2.ResponseLeader()
         responce.id = leader
         responce.address = all_nodes[leader]
         return responce
 
-    def Suspend(self, request, context):
-        pass
+    def Suspend(self, request, _):
+        print("Command from client: suspand",request.period)
+        _Suspend(request.period)
+        return raft_pb2.Empty()
+
 
         
 def initServer():
+    print("The server starts at", f"{self_addr}:{self_port}")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     raft_pb2_grpc.add_serverServicer_to_server(serverServicer(), server)
     server.add_insecure_port(f"{self_addr}:{self_port}")
@@ -181,5 +205,5 @@ def initServer():
 
 if __name__ == "__main__":
     getArgs()
-    initServer()
+    Thread(target=initServer).start()
     funFollower()

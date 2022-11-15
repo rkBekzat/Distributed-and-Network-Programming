@@ -18,30 +18,33 @@ def connect(str):
 def getLeader():
     msg = raft_pb2.Empty()
     response = stub.GetLeader(msg)
-    print(f"ID: {response.id}, Address: {response.address}")
+    print(f"{response.id} {response.address}")
 
 def suspend(str):
     _, period = str.split(' ')
-    msg = raft_pb2.RequestPeriod(period=period)
-    response = stub.Suspend(msg)
+    msg = raft_pb2.RequestPeriod(period=int(period))
+    stub.Suspend(msg)
 
 
 def main():
     try:    
+        print("The client starts")
         while True:
             func = input()
             if "connect" in func:
                 connect(func)
             elif isConnected == "not connected":
                 print("Client not connected to server")
-            elif "getleader" == func:
+            elif "getLeader" == func:
                 getLeader()
-            elif "suspend" in func:
+            elif "suspand" in func:
                 suspend(func)
+            elif "quit" == func:
+                raise KeyboardInterrupt
             else:
                 print("this function doesn't exist")
     except KeyboardInterrupt:
-        print("Shutting down")
+        print("The client ends")
 
 if __name__ == '__main__':
     main()
