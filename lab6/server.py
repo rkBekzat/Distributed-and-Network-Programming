@@ -1,9 +1,14 @@
+import os
+import random
+import sys
+import time
 from concurrent import futures
-import grpc
-import raft_pb2, raft_pb2_grpc
-import sys, os
 from threading import Thread
 
+import grpc
+
+import raft_pb2
+import raft_pb2_grpc
 
 self_id = -1
 self_addr = ""
@@ -15,7 +20,8 @@ self_voted_me = 0
 self_leader = False
 
 leader = -1
-
+wait_time = random.randint(150, 300)
+restart = False 
 all_nodes = {}
 
 def getDataFromConfig(id):
@@ -53,12 +59,13 @@ def _RequestVote(trem, candidateID):
         return _RequestVote(trem, candidateID)
     return False
 def _AppendEntries(trem, candidateID):
-    global self_term_no, self_voted, leader, self_leader
+    global self_term_no, self_voted, leader, self_leader, restart
     self_leader = False
     if self_term_no <= trem:
         self_term_no = trem
         self_voted = False
         leader = candidateID
+        restart = True
         return True
     return False
     
@@ -87,12 +94,23 @@ def funThrVoteForMe():
             if responce.vote:
                 self_voted_me += 1
 
+def waiting():
+    global restart
+    for i in range(wait_time):
+            time.sleep(0.001)
+            if restart == True:
+                break
+    return restart
+
 def funFollower():
-    global self_term_no, self_voted_me, self_leader, self_voted
+    global self_term_no, self_voted_me, self_leader, self_voted, restart
     is_Candidate = False
     is_Candidate_term = 0
-    while True:
+    while True: 
         # TODO wait function
+        if waiting():
+            restart = False
+            continue
 
         if is_Candidate and (is_Candidate_term != self_term_no or self_voted_me < len(all_nodes.keys())/2):
             is_Candidate = False
@@ -108,15 +126,17 @@ def funFollower():
 
 
 def funLeader():
-    global self_leader, leader, self_id
+    global self_leader, leader, self_id, restart
     leader = self_id
     while self_leader:
         # TODO wait heart beat rate 
+        if waiting():
+            restart = False 
+            continue
 
         Thread(target=funThrAppendForMe).start()
         pass
     self_leader = False
-
 
 
 class serverServicer(raft_pb2_grpc.serverServicer):
