@@ -22,6 +22,7 @@ self_leader = False
 leader = -1
 wait_time = random.randint(150, 300)
 restart = False 
+suspend = 0
 all_nodes = {}
 
 def getDataFromConfig(id):
@@ -71,7 +72,8 @@ def _AppendEntries(trem, candidateID):
     
 
 def _Suspend(time):
-    pass
+    global suspend
+    suspend = time 
 
 def funThrAppendForMe():
     global self_id, self_term_no
@@ -94,23 +96,28 @@ def funThrVoteForMe():
             if responce.vote:
                 self_voted_me += 1
 
-def waiting():
-    global restart
-    for i in range(wait_time):
+def waiting(time, suspending):
+    global restart, suspend
+    for i in range(time):
             time.sleep(0.001)
+            if suspending:
+                continue
             if restart == True:
                 break
+    if suspending:
+        suspend = 0
     return restart
 
 def funFollower():
-    global self_term_no, self_voted_me, self_leader, self_voted, restart
+    global self_term_no, self_voted_me, self_leader, self_voted, restart, suspend
     is_Candidate = False
     is_Candidate_term = 0
     while True: 
         # TODO wait function
-        if waiting():
+        if waiting(suspend, True) and waiting(wait_time, False):
             restart = False
             continue
+        waiting(suspend, True)
 
         if is_Candidate and (is_Candidate_term != self_term_no or self_voted_me < len(all_nodes.keys())/2):
             is_Candidate = False
@@ -130,9 +137,11 @@ def funLeader():
     leader = self_id
     while self_leader:
         # TODO wait heart beat rate 
-        if waiting():
-            restart = False 
+        
+        if waiting(suspend, True) and waiting(wait_time, False):
+            restart = False
             continue
+        waiting(suspend, True)
 
         Thread(target=funThrAppendForMe).start()
         pass
