@@ -43,7 +43,7 @@ def getDataFromConfig(id):
 def getArgs():
     global self_id, self_addr, self_port
     self_id = int(sys.argv[1])
-    self_addr, self_port = getDataFromConfig()
+    self_addr, self_port = getDataFromConfig(self_id)
 
 
 def _RequestVote(trem, candidateID):
