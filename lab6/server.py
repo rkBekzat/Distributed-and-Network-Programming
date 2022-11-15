@@ -47,8 +47,9 @@ def getArgs():
 
 
 def _RequestVote(trem, candidateID):
-    global self_term_no, self_voted, self_leader
+    global self_term_no, self_voted, self_leader, restart
     self_leader = False
+    restart = True
     if self_term_no == trem:
         if self_voted:
             return False
@@ -59,21 +60,23 @@ def _RequestVote(trem, candidateID):
         self_term_no = trem
         return _RequestVote(trem, candidateID)
     return False
+
 def _AppendEntries(trem, candidateID):
     global self_term_no, self_voted, leader, self_leader, restart
     self_leader = False
+    restart = True
     if self_term_no <= trem:
         self_term_no = trem
         self_voted = False
         leader = candidateID
-        restart = True
         return True
     return False
     
 
 def _Suspend(time):
-    global suspend
+    global suspend, restart
     suspend = time 
+    restart = True
 
 def funThrAppendForMe():
     global self_id, self_term_no
@@ -96,28 +99,28 @@ def funThrVoteForMe():
             if responce.vote:
                 self_voted_me += 1
 
-def waiting(time, suspending):
-    global restart, suspend
-    for i in range(time):
+def waiting():
+    global restart, suspend, wait_time
+    restart = True
+    while restart:
+        restart = False
+        if suspend != 0:
+            for _ in range(suspend):
+                time.sleep(0.001)
+            suspend = 0
+        for _ in range(time):
             time.sleep(0.001)
-            if suspending:
-                continue
-            if restart == True:
+            if restart:
                 break
-    if suspending:
-        suspend = 0
+
     return restart
 
 def funFollower():
     global self_term_no, self_voted_me, self_leader, self_voted, restart, suspend
     is_Candidate = False
     is_Candidate_term = 0
-    while True: 
-        # TODO wait function
-        if waiting(suspend, True) and waiting(wait_time, False):
-            restart = False
-            continue
-        waiting(suspend, True)
+    while True:
+        waiting()
 
         if is_Candidate and (is_Candidate_term != self_term_no or self_voted_me < len(all_nodes.keys())/2):
             is_Candidate = False
@@ -136,12 +139,7 @@ def funLeader():
     global self_leader, leader, self_id, restart
     leader = self_id
     while self_leader:
-        # TODO wait heart beat rate 
-        
-        if waiting(suspend, True) and waiting(wait_time, False):
-            restart = False
-            continue
-        waiting(suspend, True)
+        waiting()
 
         Thread(target=funThrAppendForMe).start()
         pass
@@ -174,35 +172,14 @@ class serverServicer(raft_pb2_grpc.serverServicer):
         pass
 
         
-def Server():
-    getArgs()
+def initServer():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     raft_pb2_grpc.add_serverServicer_to_server(serverServicer(), server)
     server.add_insecure_port(f"{self_addr}:{self_port}")
     server.start()
     server.wait_for_termination()
 
-def ownFunc():
-    while True:
-        if self_leader:
-            funLeader()
-        else:
-            funFollower()
-
-def main():
-    thread1 = Thread(target=Server, args=())
-    thread2 = Thread(target=ownFunc, args=())
-    thread1.start()
-    thread2.start()
-
-
 if __name__ == "__main__":
-    main()
-# server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-# Example_pb2_grpc.add_ExampleServicer_to_server(
-#     ExampleServicer(),
-#     server)
-# server.add_insecure_port(SERVER_ADDRESS)
-
-# server.start()
-# server.wait_for_termination()
+    getArgs()
+    initServer()
+    funFollower()
