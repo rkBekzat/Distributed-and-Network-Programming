@@ -18,7 +18,7 @@ def connect(str):
 def getLeader():
     msg = raft_pb2.Empty()
     response = stub.GetLeader(msg)
-    print(f"{response.id} {response.address}")
+    print(f"{response.id}:{response.address}")
 
 def suspend(str):
     _, period = str.split(' ')
