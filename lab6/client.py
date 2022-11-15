@@ -9,7 +9,7 @@ def connect(str):
     global channel, stub, response, isConnected
     try:
         channel = grpc.insecure_channel(f"{addr}:{port}")
-        stub = raft_pb2_grpc.client(channel)
+        stub = raft_pb2_grpc.serverStub(channel)
     except Exception as error:
         print(error)	
     isConnected='connected'
