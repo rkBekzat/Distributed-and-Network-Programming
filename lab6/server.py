@@ -165,8 +165,30 @@ class serverServicer(raft_pb2_grpc.serverServicer):
         pass
 
         
+def Server():
+    getArgs()
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    raft_pb2_grpc.add_serverServicer_to_server(serverServicer(), server)
+    server.add_insecure_port(f"{self_addr}:{self_port}")
+    server.start()
+    server.wait_for_termination()
+
+def ownFunc():
+    while True:
+        if self_leader:
+            funLeader()
+        else:
+            funFollower()
+
+def main():
+    thread1 = Thread(target=Server, args=())
+    thread2 = Thread(target=ownFunc, args=())
+    thread1.start()
+    thread2.start()
 
 
+if __name__ == "__main__":
+    main()
 # server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 # Example_pb2_grpc.add_ExampleServicer_to_server(
 #     ExampleServicer(),
