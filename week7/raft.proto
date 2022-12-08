@@ -1,29 +1,72 @@
 syntax = "proto3";
 
 service RaftNode {
-        rpc RequestVote(NodeArgs) returns (ResultWithTerm);
-        rpc AppendEntries(NodeArgs) returns (ResultWithTerm);
-        rpc GetLeader(NoArgs) returns (LeaderResp);
-        rpc Suspend(DurationArgs) returns (NoArgs);
+    rpc RequestVote(RequestVoteArgs) returns (ResultWithTerm);
+    rpc AppendEntries(AppendEntriesArgs) returns (ResultWithTerm);
+
+    rpc GetLeader(NoArgs) returns (LeaderResp);
+    rpc Suspend(DurationArgs) returns (NoArgs);
+
+    rpc SetVal(KeyValueArgs) returns (Result);
+    rpc GetVal(KeyArgs) returns (ResultWithValue);
 }
 
-message NoArgs {}
+message Log{
+    int32 index = 1;
+    int32 term = 2;
+    string command = 3;
+}
 
-message NodeArgs {
-        int32 term = 1;
-        int32 node_id = 2;
+message RequestVoteArgs {
+    int32 term = 1;
+    int32 node_id = 2;
+    int32 last_index = 3;
+    int32 last_term = 4;
+}
+message AppendEntriesArgs {
+    int32 term = 1;
+    int32 node_id = 2;
+    int32 prev_index = 3;
+    int32 prev_term = 4;
+    repeated Log entries = 5;
+    int32 leader_commit = 6;
 }
 
 message ResultWithTerm {
-        int32 term = 1;
-        bool result = 2;
+    int32 term = 1;
+    bool result = 2;
+}
+
+
+
+
+message NoArgs {}
+
+message LeaderResp {
+    int32 leader_id = 1;
+    string leader_addr = 2;
 }
 
 message DurationArgs {
-        int32 duration = 1;
+    int32 duration = 1;
 }
 
-message LeaderResp {
-        int32 leader_id = 1;
-        string leader_addr = 2;
+
+
+message KeyValueArgs {
+    string key = 1;
+    string value = 2;
+}
+
+message KeyArgs {
+    string key = 1;
+}
+
+message Result {
+    bool result = 1;
+}
+
+message ResultWithValue {
+    bool result = 1;
+    string value = 2;
 }
