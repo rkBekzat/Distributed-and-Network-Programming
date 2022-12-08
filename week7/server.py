@@ -43,8 +43,8 @@ state = {
     'lastApplied':0,
     'commitIndex':0,
 
-    'nextIndex': [],
-    'matchIndex': [],
+    'nextIndex': {},
+    'matchIndex': {},
 }
 
 # for debugging
@@ -204,47 +204,48 @@ def heartbeat_thread(id_to_request):
             if heartbeat_events[id_to_request].wait(timeout=0.5):
                 heartbeat_events[id_to_request].clear()
 
-                if (state['type'] != 'leader') or is_suspended:
-                    continue
-
-                ensure_connected(id_to_request)
-                (_, _, stub) = state['nodes'][id_to_request]
+                if state['commitIndex'] not in state['matchIndex']:
+                    state['matchIndex'][state['commitIndex']] = 0
+                if state['commitIndex'] not in state['nextIndex']:
+                    state['nextIndex'][state['commitIndex']] = state['commitIndex']+1
                 
-                while state['commitIndex'] >= len(state['matchIndex']):
-                    state['matchIndex'].append(0)
-                while state['commitIndex'] >= len(state['nextIndex']):
-                    state['nextIndex'].append(state['commitIndex']+1)
+                if id_to_request == state['id']:
+                    if state['rcp_vote_count'] >= (len(state['nodes'])//2) + 1:
+                        state['nextIndex'][state['commitIndex']] += 1
+                    else:
+                        state['nextIndex'][state['commitIndex']] -= 1
                     
-                resp = stub.AppendEntries(pb2.AppendEntriesArgs(
-                    term=state['term'], 
-                    node_id=state['id'],
-                    prev_index=state['matchIndex'][state['commitIndex']],
-                    prev_term=logs[state['matchIndex'][state['commitIndex']]].term,
-                    entries=logs[:state['matchIndex'][state['commitIndex']]+1],
-                    leader_commit=state['commitIndex']
-                ), timeout=0.100)
+                    if state['nextIndex'][state['commitIndex']] > state['matchIndex'][state['commitIndex']]:
+                        state['matchIndex'][state['commitIndex']] += 1
+                    state['rcp_vote_count'] = 0
+                else:
+                    if (state['type'] != 'leader') or is_suspended:
+                        continue
 
-                if resp.result and state['lastLogIndx'] >= state['nextIndex'][state['commitIndex']]:
-                    state['rcp_vote_count'] += 1
-                    if id_to_request == state['id']:
-                        if state['rcp_vote_count'] >= (len(state['nodes'])//2) + 1:
-                            state['nextIndex'][state['commitIndex']] += 1
-                        else:
-                            state['nextIndex'][state['commitIndex']] -= 1
-                        
-                        if state['nextIndex'][state['commitIndex']] > state['matchIndex'][state['commitIndex']]:
-                            state['matchIndex'][state['commitIndex']] += 1
-                        state['rcp_vote_count'] = 0
+                    ensure_connected(id_to_request)
+                    (_, _, stub) = state['nodes'][id_to_request]
+                    
+                    resp = stub.AppendEntries(pb2.AppendEntriesArgs(
+                        term=state['term'], 
+                        node_id=state['id'],
+                        prev_index=state['matchIndex'][state['commitIndex']],
+                        prev_term=logs[state['matchIndex'][state['commitIndex']]].term,
+                        entries=logs[:state['matchIndex'][state['commitIndex']]+1],
+                        leader_commit=state['commitIndex']
+                    ), timeout=0.100)
 
-                if (state['type'] != 'leader') or is_suspended:
-                    continue
+                    if resp.result and state['lastLogIndx'] >= state['nextIndex'][state['commitIndex']]:
+                        state['rcp_vote_count'] += 1
 
-                with state_lock:
-                    if state['term'] < resp.term:
-                        reset_election_campaign_timer()
-                        state['term'] = resp.term
-                        become_a_follower()
-                threading.Timer(HEARTBEAT_DURATION*0.001, heartbeat_events[id_to_request].set).start()
+                    if (state['type'] != 'leader') or is_suspended:
+                        continue
+
+                    with state_lock:
+                        if state['term'] < resp.term:
+                            reset_election_campaign_timer()
+                            state['term'] = resp.term
+                            become_a_follower()
+                    threading.Timer(HEARTBEAT_DURATION*0.001, heartbeat_events[id_to_request].set).start()
         except grpc.RpcError:
             pass
 

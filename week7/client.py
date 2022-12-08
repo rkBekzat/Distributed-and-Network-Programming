@@ -20,6 +20,7 @@ def cmd_getleader(state):
     (err_msg, state1) = ensure_connected(state)
     if err_msg:
         return (err_msg, state1)
+    print(state1['stub'])
     resp = state1['stub'].GetLeader(pb2.NoArgs())
     return f"{resp.leader_id} {resp.leader_addr}", state1
 
