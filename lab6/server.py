@@ -38,7 +38,7 @@ def getDataFromConfig(id):
                 return line[1], line[2]
     except Exception:
         pass
-    raise f"Id {id} did not found in config"
+    raise f"Id {id} did not found in config"    
 
 def getArgs():
     global self_id, self_addr, self_port

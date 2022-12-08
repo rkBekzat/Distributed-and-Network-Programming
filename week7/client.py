@@ -56,9 +56,9 @@ def exec_cmd(line, state):
         state['working'] = False
         return "The client ends", state
     elif parts[0] == 'setval':
-        return cmd_suspend(str(parts[1]), str(parts[2]), state)
+        return cmd_setval(str(parts[1]), str(parts[2]), state)
     elif parts[0] == 'getval':
-        return cmd_suspend(str(parts[1]), state)
+        return cmd_getval(str(parts[1]), state)
     else:
         return f"Unknown command {parts[0]}", state
 
