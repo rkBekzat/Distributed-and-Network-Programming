@@ -19,12 +19,14 @@ import raft_pb2 as pb2
 #
 # global state
 #
+key_value_map = {}
 
 is_terminating = False
 is_suspended = False
 state_lock = threading.Lock()
 election_timer_fired = threading.Event()
 heartbeat_events = {}
+logs = [pb2.Log(term = 0, command="")]
 state = {
     'election_campaign_timer': None,
     'election_timeout': -1,
@@ -34,6 +36,14 @@ state = {
     'vote_count': 0,
     'voted_for_id': -1,
     'leader_id': -1,
+
+    'lastLogIndx': 0, # TODo make incriment by one after adding new log
+
+    'lastApplied':0,
+    'commitIndex':0,
+
+    'nextIndex': [],
+    'matchIndex': [],
 }
 
 # for debugging
@@ -137,7 +147,12 @@ def request_vote_worker_thread(id_to_request):
     ensure_connected(id_to_request)
     (_, _, stub) = state['nodes'][id_to_request]
     try:
-        resp = stub.RequestVote(pb2.NodeArgs(term=state['term'], node_id=state['id']), timeout=0.1)
+        resp = stub.RequestVote(pb2.RequestVoteArgs(
+            term=state['term'], 
+            node_id=state['id'],
+            last_index= state['lastLogIndx'],
+            last_term= logs[state['lastLogIndx']].term
+        ), timeout=0.1)
         # print(log_prefix() + f"response: {resp}")
 
         with state_lock:
@@ -193,7 +208,20 @@ def heartbeat_thread(id_to_request):
 
                 ensure_connected(id_to_request)
                 (_, _, stub) = state['nodes'][id_to_request]
-                resp = stub.AppendEntries(pb2.NodeArgs(term=state['term'], node_id=state['id']), timeout=0.100)
+
+                while state['commitIndex'] >= len(state['matchIndex']):
+                    state['matchIndex'].append(0)
+                while state['commitIndex'] >= len(state['nextIndex']):
+                    state['matchIndex'].append(state['commitIndex']+1)
+                    
+                resp = stub.AppendEntries(pb2.AppendEntriesArgs(
+                    term=state['term'], 
+                    node_id=state['id'],
+                    prev_index=state['matchIndex'][state['commitIndex']],
+                    prev_term=logs[state['matchIndex'][state['commitIndex']]].term,
+                    entries=logs[:state['matchIndex'][state['commitIndex']]+1],
+                    leader_commit=state['commitIndex']
+                ), timeout=0.100)
 
                 if (state['type'] != 'leader') or is_suspended:
                     continue
@@ -233,13 +261,18 @@ class Handler(pb2_grpc.RaftNodeServicer):
             if state['term'] < request.term:
                 state['term'] = request.term
                 become_a_follower()
-            if state['term'] == request.term:
-                if state['voted_for_id'] == -1:
-                    # reset_election_campaign_timer()
-                    become_a_follower()
-                    state['voted_for_id'] = request.node_id
-                    reply = {'result': True, 'term': state['term']}
-                    print(f"Voted for node {state['voted_for_id']}")
+            if state['term'] == request.term and state['voted_for_id'] != -1:
+                return pb2.ResultWithTerm(**reply)
+            if state['lastLogIndx'] > request.last_index:
+                return pb2.ResultWithTerm(**reply)
+            if state['lastLogIndx'] == request.last_index and logs[request.last_index].term != request.last_term:
+                return pb2.ResultWithTerm(**reply)
+            
+            become_a_follower()
+            state['voted_for_id'] = request.node_id
+            reply = {'result': True, 'term': state['term']}
+            print(f"Voted for node {state['voted_for_id']}")
+
             return pb2.ResultWithTerm(**reply)
 
     def AppendEntries(self, request, context):
@@ -250,13 +283,49 @@ class Handler(pb2_grpc.RaftNodeServicer):
         reset_election_campaign_timer()
 
         with state_lock:
+            global key_value_map, logs
             reply = {'result': False, 'term': state['term']}
             if state['term'] < request.term:
                 state['term'] = request.term
                 become_a_follower()
-            if state['term'] == request.term:
-                state['leader_id'] = request.node_id
-                reply = {'result': True, 'term': state['term']}
+            if state['term'] != request.term:
+                return pb2.ResultWithTerm(**reply)
+            
+            if request.prev_index > state['lastLogIndx']:
+                return pb2.ResultWithTerm(**reply)
+
+            # if logs[request.prev_index].term != request.prev_term:
+                
+
+            # new_li = []
+            # state['lastLogIndex'] = 0
+            # for log in logs:
+            #     if request.prev_term < log.term and request.prev_index < log.index:
+            #         break
+            #     new_li.append(log)
+            #     state['lastLogIndex'] = max(state['lastLogIndex'], log.index)
+            # logs = new_li
+
+            # for log in request.entries:
+            #     if not log in logs:
+            #         logs.append(log)
+            #         state['lastLogIndex'] = max(state['lastLogIndex'], log.index)
+
+            # if request.leader_commit > state['commitIndex']:
+            #     key_value_map = {}
+            #     state['commitIndex'] = min(request.leader_commit, state['lastLogIndex'])
+            #     for log in logs:
+            #         if state['commitIndex'] == log.index:
+            #             break
+            #         key_value_map[log.command.split('=')[0]] = log.command.split('=')[1]
+            
+            # if state['type'] == 'leader':
+            #     while state['lastLogIndex'] >= state['nextIndex']:
+            #         state['nextIndex'] += 1
+            #     #f there exists an N such that N > commitIndex, a majority of matchIndex[i] ≥ N, and log[N].term == currentTerm: set commitIndex = N
+            
+            state['leader_id'] = request.node_id
+            reply = {'result': True, 'term': state['term']}
             return pb2.ResultWithTerm(**reply)
 
     def GetLeader(self, request, context):
@@ -276,6 +345,32 @@ class Handler(pb2_grpc.RaftNodeServicer):
         is_suspended = True
         threading.Timer(request.duration, wake_up_after_suspend).start()
         return pb2.NoArgs()
+
+    # def SetVal(self, request, context):
+    #     global is_suspended
+    #     if is_suspended:
+    #         return
+    #     try:
+    #         if state['type'] == 'leader':
+    #             pb2.Log(index = state['nextIndex'], term = state['term'], command=f"{request.key}={request.value}")
+    #         elif state['type'] == 'follower':
+    #             (_, _, stub) = state['nodes'][state['leader_id']]
+    #             resp = stub.SetVal(request, timeout=0.100)
+    #             return resp
+    #         else:
+    #             return pb2.Result(result = False)
+    #         return pb2.Result(result = True)
+    #     except Exception:
+    #         return pb2.Result(result = False)
+
+    # def GetVal(self, request, context):
+    #     global is_suspended
+    #     if is_suspended:
+    #         return
+    #     try:
+    #         return pb2.ResultWithValue(result = True, value=key_value_map[request.key])
+    #     except Exception:
+    #         return pb2.ResultWithValue(result = False, value= '')
 
 #
 # other
