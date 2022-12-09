@@ -21,12 +21,13 @@ import raft_pb2 as pb2
 #
 key_value_map = {}
 
+is_result = False
 is_terminating = False
 is_suspended = False
 state_lock = threading.Lock()
 election_timer_fired = threading.Event()
 heartbeat_events = {}
-logs = [pb2.Log(term = 0, command="")]
+logs = [{'term' :0, 'command':""}]
 state = {
     'election_campaign_timer': None,
     'election_timeout': -1,
@@ -88,8 +89,8 @@ def start_election():
         # vote for ourselves
         state['vote_count'] = 1
         state['voted_for_id'] = state['id']
-
-    print(f"I am a candidate. Term: {state['term']}")
+    if is_result:
+        print(f"I am a candidate. Term: {state['term']}")
     for id in state['nodes'].keys():
         if id != state['id']:
             t = threading.Thread(target=request_vote_worker_thread, args=(id,))
@@ -115,7 +116,8 @@ def finalize_election():
             state['vote_count'] = 0
             state['voted_for_id'] = -1
             start_heartbeats()
-            print("Votes received")
+            if is_result:
+                print("Votes received")
             print(f"I am a leader. Term: {state['term']}")
             return
         # if election was unsuccessful
@@ -125,7 +127,7 @@ def finalize_election():
         reset_election_campaign_timer()
 
 def become_a_follower():
-    if state['type'] != 'follower':
+    if state['type'] != 'follower' and is_result:
         print(f"I am a follower. Term: {state['term']}")
     state['type'] = 'follower'
     state['voted_for_id'] = -1
@@ -152,7 +154,7 @@ def request_vote_worker_thread(id_to_request):
             term=state['term'], 
             node_id=state['id'],
             last_index= state['lastLogIndx'],
-            last_term= logs[state['lastLogIndx']].term
+            last_term= logs[state['lastLogIndx']]['term']
         ), timeout=0.1)
         # print(log_prefix() + f"response: {resp}")
 
@@ -189,7 +191,8 @@ def election_timeout_thread():
             if state['type'] == 'follower':
                 # node didn't receive any heartbeats on time
                 # that's why it should become a candidate
-                print("The leader is dead")
+                if is_result:
+                    print("The leader is dead")
                 start_election()
             elif state['type'] == 'candidate':
                 # okay, election is over
@@ -198,39 +201,59 @@ def election_timeout_thread():
             # if somehow we got here while being a leader,
             # then do nothing
 
+def get_state_data():
+    commitIndex = state['commitIndex']
+
+    if commitIndex not in state['matchIndex']:
+        state['matchIndex'][commitIndex] = 0
+    if commitIndex not in state['nextIndex']:
+        state['nextIndex'][commitIndex] = commitIndex + 1
+    return commitIndex, state['matchIndex'][commitIndex], state['nextIndex'][commitIndex]
+
 def heartbeat_thread(id_to_request):
     while not is_terminating:
         try:
             if heartbeat_events[id_to_request].wait(timeout=0.5):
                 heartbeat_events[id_to_request].clear()
 
-                if state['commitIndex'] not in state['matchIndex']:
-                    state['matchIndex'][state['commitIndex']] = 0
-                if state['commitIndex'] not in state['nextIndex']:
-                    state['nextIndex'][state['commitIndex']] = state['commitIndex']+1
+                if (state['type'] != 'leader') or is_suspended:
+                    continue
+
+                commitIndex, matchIndex, nextIndex = get_state_data()
                 
                 if id_to_request == state['id']:
-                    if state['rcp_vote_count'] >= (len(state['nodes'])//2) + 1:
-                        state['nextIndex'][state['commitIndex']] += 1
-                    else:
-                        state['nextIndex'][state['commitIndex']] -= 1
+                    # print("new loop")
+                    # print(state['lastLogIndx'], commitIndex, matchIndex, nextIndex)
+                    if state['lastLogIndx'] >= nextIndex:
+                        state['rcp_vote_count'] += 1
+                        if state['rcp_vote_count'] >= (len(state['nodes'])//2) + 1:
+                            state['nextIndex'][commitIndex] += 1
+                        else:
+                            state['nextIndex'][commitIndex] -= 1
+                        state['rcp_vote_count'] = 0
+                    if nextIndex > matchIndex + 1 and nextIndex <= len(logs):
+                        state['matchIndex'][commitIndex] += 1
+                    for index, log in enumerate(logs):
+                        if log['term'] == state['term'] and commitIndex < index:
+                            commitIndex = index
+                    state['commitIndex'] = index
+                    commitIndex, matchIndex, nextIndex = get_state_data()
                     
-                    if state['nextIndex'][state['commitIndex']] > state['matchIndex'][state['commitIndex']]:
-                        state['matchIndex'][state['commitIndex']] += 1
-                    state['rcp_vote_count'] = 0
-                else:
+
                     if (state['type'] != 'leader') or is_suspended:
                         continue
 
+                    threading.Timer(HEARTBEAT_DURATION*0.001, heartbeat_events[id_to_request].set).start()
+                else:
                     ensure_connected(id_to_request)
                     (_, _, stub) = state['nodes'][id_to_request]
                     
                     resp = stub.AppendEntries(pb2.AppendEntriesArgs(
                         term=state['term'], 
                         node_id=state['id'],
-                        prev_index=state['matchIndex'][state['commitIndex']],
-                        prev_term=logs[state['matchIndex'][state['commitIndex']]].term,
-                        entries=logs[:state['matchIndex'][state['commitIndex']]+1],
+                        prev_index=matchIndex,
+                        prev_term=logs[matchIndex]['term'],
+                        entries=[pb2.Log(**log) for log in logs[:matchIndex+1]],
                         leader_commit=state['commitIndex']
                     ), timeout=0.100)
 
@@ -248,6 +271,8 @@ def heartbeat_thread(id_to_request):
                     threading.Timer(HEARTBEAT_DURATION*0.001, heartbeat_events[id_to_request].set).start()
         except grpc.RpcError:
             pass
+        except Exception as E:
+            print(E)
 
 #
 # gRPC server handler
@@ -275,21 +300,23 @@ class Handler(pb2_grpc.RaftNodeServicer):
             if state['term'] < request.term:
                 state['term'] = request.term
                 become_a_follower()
-            if state['term'] == request.term and state['voted_for_id'] != -1:
+            if state['term'] != request.term or state['voted_for_id'] != -1:
                 return pb2.ResultWithTerm(**reply)
             if state['lastLogIndx'] > request.last_index:
                 return pb2.ResultWithTerm(**reply)
-            if state['lastLogIndx'] == request.last_index and logs[request.last_index].term != request.last_term:
+            if state['lastLogIndx'] == request.last_index and logs[request.last_index]['term'] != request.last_term:
                 return pb2.ResultWithTerm(**reply)
             
             become_a_follower()
             state['voted_for_id'] = request.node_id
             reply = {'result': True, 'term': state['term']}
-            print(f"Voted for node {state['voted_for_id']}")
+            if is_result:
+                print(f"Voted for node {state['voted_for_id']}")
 
             return pb2.ResultWithTerm(**reply)
 
     def AppendEntries(self, request, context):
+        print('AE', request.prev_index, state['lastLogIndx'], request.leader_commit)
         global is_suspended
         if is_suspended:
             return
@@ -305,22 +332,23 @@ class Handler(pb2_grpc.RaftNodeServicer):
             if state['term'] != request.term:
                 return pb2.ResultWithTerm(**reply)
             
-            if request.prev_index > state['lastLogIndx']:
+            if request.prev_index > len(logs):
                 return pb2.ResultWithTerm(**reply)
 
             is_ok = True
             for log in zip(logs, request.entries):
-                if log[0].term != log[1].term or log[0].command != log[1].command:
+                if log[0]['term'] != log[1].term or log[0]['command'] != log[1].command:
                     is_ok = False
                     break
-
             if not is_ok or len(logs) < len(request.entries):
-                logs = request.entries
+                logs = [{'term' :log.term, 'command':log.command} for log in request.entries]
                 state['lastLogIndx'] = len(logs) - 1
-            
-
+                key_value_map.clear()
+                for log in logs:
+                    if log['command'] != "":
+                        key_value_map[log['command'].split('=')[0]] = log['command'].split('=')[1]
             if request.leader_commit > state['commitIndex']:
-                state['commitIndex'] = max(request.leader_commit, len(request.entries) - 1)
+                state['commitIndex'] = min(request.leader_commit, len(request.entries) - 1)
 
             state['leader_id'] = request.node_id
             reply = {'result': True, 'term': state['term']}
@@ -350,7 +378,8 @@ class Handler(pb2_grpc.RaftNodeServicer):
             return
         try:
             if state['type'] == 'leader':
-                log = pb2.Log(term = state['term'], command=f"{request.key}={request.value}")
+                log = {'term' :state['term'], 'command':f"{request.key}={request.value}"}
+                key_value_map[request.key] = request.value
                 logs.append(log)
                 state['lastLogIndx'] = len(logs) - 1
             elif state['type'] == 'follower':
@@ -412,8 +441,9 @@ def main(id, nodes):
 
     server = start_server(state)
     (host, port, _) = nodes[id]
-    print(f"The server starts at {host}:{port}")
-    print(f"I am a follower. Term: 0")
+    if is_result:
+        print(f"The server starts at {host}:{port}")
+        print(f"I am a follower. Term: 0")
     select_new_election_timeout_duration()
     reset_election_campaign_timer()
 
