@@ -21,7 +21,7 @@ import raft_pb2 as pb2
 #
 key_value_map = {}
 
-is_result = False
+is_result = True
 is_terminating = False
 is_suspended = False
 state_lock = threading.Lock()
@@ -373,6 +373,7 @@ class Handler(pb2_grpc.RaftNodeServicer):
         return pb2.NoArgs()
 
     def SetVal(self, request, context):
+        print('setval', request.key, request.value)
         global is_suspended
         if is_suspended:
             return
